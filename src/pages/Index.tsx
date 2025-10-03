@@ -25,6 +25,22 @@ interface Post {
   quantumConnections: number;
 }
 
+interface Message {
+  id: number;
+  sender: User;
+  content: string;
+  timestamp: string;
+  isOwn: boolean;
+}
+
+interface Chat {
+  id: number;
+  user: User;
+  lastMessage: string;
+  timestamp: string;
+  unread: number;
+}
+
 const currentUser: User = {
   id: 0,
   name: 'Аврора Кибер',
@@ -71,8 +87,22 @@ const mockPosts: Post[] = [
   }
 ];
 
+const mockChats: Chat[] = [
+  { id: 1, user: mockUsers[0], lastMessage: 'Отличная идея с марсианской станцией!', timestamp: '5 мин', unread: 2 },
+  { id: 2, user: mockUsers[2], lastMessage: 'Когда покажешь новую голограмму?', timestamp: '20 мин', unread: 0 },
+  { id: 3, user: mockUsers[3], lastMessage: 'Спасибо за совет по медитации!', timestamp: '2 ч', unread: 1 }
+];
+
 const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [showChat, setShowChat] = useState(false);
+  const [activeChat, setActiveChat] = useState<Chat | null>(null);
+  const [messageText, setMessageText] = useState('');
+  const [messages, setMessages] = useState<Message[]>([
+    { id: 1, sender: mockUsers[0], content: 'Привет! Как дела с квантовой сетью?', timestamp: '10:30', isOwn: false },
+    { id: 2, sender: currentUser, content: 'Всё отлично! Только что подключился к новому узлу.', timestamp: '10:32', isOwn: true },
+    { id: 3, sender: mockUsers[0], content: 'Круто! Я тоже экспериментирую с новыми протоколами связи.', timestamp: '10:33', isOwn: false }
+  ]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -101,6 +131,15 @@ const Index = () => {
           </div>
 
           <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="relative"
+              onClick={() => setShowChat(!showChat)}
+            >
+              <Icon name="MessageSquare" size={20} />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full animate-glow-pulse"></span>
+            </Button>
             <Button variant="ghost" size="icon" className="relative">
               <Icon name="Bell" size={20} />
               <span className="absolute top-1 right-1 w-2 h-2 bg-secondary rounded-full animate-glow-pulse"></span>
@@ -295,6 +334,141 @@ const Index = () => {
           </aside>
         </div>
       </div>
+
+      {showChat && (
+        <div className="fixed bottom-0 right-4 w-96 h-[600px] bg-card border-2 border-primary/40 rounded-t-2xl shadow-2xl z-50 flex flex-col animate-fade-in">
+          <div className="p-4 border-b border-border bg-gradient-to-r from-primary/20 to-secondary/20 rounded-t-2xl flex items-center justify-between">
+            <h3 className="font-bold flex items-center gap-2">
+              <Icon name="MessageSquare" size={20} className="text-primary" />
+              {activeChat ? activeChat.user.name : 'Квантовые чаты'}
+            </h3>
+            <div className="flex gap-2">
+              {activeChat && (
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  onClick={() => setActiveChat(null)}
+                  className="h-8 w-8"
+                >
+                  <Icon name="ArrowLeft" size={18} />
+                </Button>
+              )}
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                onClick={() => setShowChat(false)}
+                className="h-8 w-8"
+              >
+                <Icon name="X" size={18} />
+              </Button>
+            </div>
+          </div>
+
+          {!activeChat ? (
+            <div className="flex-1 overflow-y-auto">
+              {mockChats.map((chat) => (
+                <div
+                  key={chat.id}
+                  onClick={() => setActiveChat(chat)}
+                  className="p-4 border-b border-border hover:bg-muted/50 transition-colors cursor-pointer flex items-center gap-3"
+                >
+                  <div className="relative">
+                    <Avatar className="w-12 h-12 border-2 border-primary/40">
+                      <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20">
+                        {chat.user.name.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    {chat.user.isOnline && (
+                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-primary rounded-full border-2 border-card"></div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start mb-1">
+                      <p className="font-medium truncate">{chat.user.name}</p>
+                      <span className="text-xs text-muted-foreground">{chat.timestamp}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground truncate">{chat.lastMessage}</p>
+                  </div>
+                  {chat.unread > 0 && (
+                    <Badge className="bg-primary text-background">{chat.unread}</Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex gap-3 ${msg.isOwn ? 'flex-row-reverse' : 'flex-row'}`}
+                  >
+                    <Avatar className="w-8 h-8 border-2 border-primary/40">
+                      <AvatarImage src={msg.isOwn ? currentUser.avatar : ''} />
+                      <AvatarFallback className="bg-gradient-to-br from-primary/20 to-secondary/20 text-xs">
+                        {msg.sender.name.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className={`flex flex-col ${msg.isOwn ? 'items-end' : 'items-start'} max-w-[70%]`}>
+                      <div
+                        className={`px-4 py-2 rounded-2xl ${
+                          msg.isOwn
+                            ? 'bg-gradient-to-r from-primary to-secondary text-background'
+                            : 'bg-muted text-foreground'
+                        }`}
+                      >
+                        <p className="text-sm">{msg.content}</p>
+                      </div>
+                      <span className="text-xs text-muted-foreground mt-1">{msg.timestamp}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-4 border-t border-border bg-card/50">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Квантовое сообщение..."
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && messageText.trim()) {
+                        setMessages([...messages, {
+                          id: messages.length + 1,
+                          sender: currentUser,
+                          content: messageText,
+                          timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+                          isOwn: true
+                        }]);
+                        setMessageText('');
+                      }
+                    }}
+                    className="flex-1 bg-muted/50 border-primary/30 focus:border-primary"
+                  />
+                  <Button
+                    size="icon"
+                    className="bg-gradient-to-r from-primary to-secondary"
+                    onClick={() => {
+                      if (messageText.trim()) {
+                        setMessages([...messages, {
+                          id: messages.length + 1,
+                          sender: currentUser,
+                          content: messageText,
+                          timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+                          isOwn: true
+                        }]);
+                        setMessageText('');
+                      }
+                    }}
+                  >
+                    <Icon name="Send" size={18} />
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 };
